@@ -5,13 +5,15 @@ import { quickSymptomNames, nameToId } from "@/data/symptoms";
 import { toDisplayName } from "@/i18n/symptomLang";
 import { motion } from "framer-motion";
 import { Stethoscope, Clock, Shield, Search } from "lucide-react";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 const Index = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
   const handleSymptomClick = (symptomId: string) => {
-    navigate(`/check?symptom=${symptomId}`);
+    sessionStorage.removeItem("cachedPrediction");
+    navigate("/check", { state: { symptom: symptomId } });
   };
 
   return (
@@ -25,6 +27,7 @@ const Index = () => {
         backgroundRepeat: 'no-repeat',
       }}
     >
+      <LanguageToggle />
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/15 via-primary/5 to-transparent" />

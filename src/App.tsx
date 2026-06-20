@@ -5,11 +5,8 @@ import SymptomCheck from "./pages/SymptomCheck";
 import Chat from "./pages/Chat";
 import Results from "./pages/Results";
 import NotFound from "./pages/NotFound";
-import { LanguageToggle } from "./components/LanguageToggle";
-
 const App = () => (
   <BrowserRouter>
-    <LanguageToggle />
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/browse" element={<SymptomBrowse />} />

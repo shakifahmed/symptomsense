@@ -514,8 +514,9 @@ const Chat = () => {
 
   return (
     <div
-      className="flex h-screen flex-col bg-lavender"
+      className="flex flex-col bg-lavender"
       style={{
+        height: "100dvh",
         backgroundImage:
           "linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('/chat.png')",
         backgroundSize:     "cover",

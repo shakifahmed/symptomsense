@@ -13,7 +13,7 @@ export function LanguageToggle() {
   return (
     <button
       onClick={toggle}
-      className="fixed right-4 top-4 z-50 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors hover:bg-secondary"
+      className="fixed right-14 top-4 z-50 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors hover:bg-secondary sm:right-4"
     >
       {isBn ? "EN" : "বাং"}
     </button>

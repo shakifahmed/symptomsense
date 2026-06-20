@@ -6,7 +6,7 @@ import { type ChatMessage } from "@/data/symptoms";
 import { getCurrentLanguage } from "@/i18n/symptomLang";
 import { api, type TriageOutput } from "@/services/api";
 import { motion } from "framer-motion";
-import { AlertCircle, CheckCircle, AlertTriangle, RotateCcw, Stethoscope, Loader2, MessageSquare, Star, Send } from "lucide-react";
+import { AlertCircle, CheckCircle, AlertTriangle, RotateCcw, Stethoscope, Loader2, MessageSquare, Star, Send, ExternalLink } from "lucide-react";
 
 interface LocationState {
   symptoms: string;
@@ -65,8 +65,19 @@ const Results = () => {
 
     if (state.cachedPrediction) {
       setPrediction(state.cachedPrediction);
+      sessionStorage.setItem("cachedPrediction", JSON.stringify(state.cachedPrediction));
       setLoading(false);
       return;
+    }
+
+    const cached = sessionStorage.getItem("cachedPrediction");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as TriageOutput;
+        setPrediction(parsed);
+        setLoading(false);
+        return;
+      } catch { /* fall through to fetch */ }
     }
 
     const fetchPrediction = async () => {
@@ -85,6 +96,7 @@ const Results = () => {
           language: getCurrentLanguage(),
         });
         setPrediction(result);
+        sessionStorage.setItem("cachedPrediction", JSON.stringify(result));
       } catch (err) {
         console.error("Predict error:", err);
         setError(t("prediction_error"));
@@ -270,6 +282,26 @@ const Results = () => {
                 </Button>
               </>
             )}
+          </motion.div>
+        )}
+
+        {/* Google Form Feedback */}
+        {prediction && !loading && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-4 text-center"
+          >
+            <a
+              href="https://forms.gle/ySHacu3uiDkvFCm2A"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t("detailed_feedback")}
+            </a>
           </motion.div>
         )}
 

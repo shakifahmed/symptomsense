@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +8,20 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, X, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadSymptoms, nameToId, idToName } from "@/data/symptoms";
+import { loadSymptoms, nameToId, idToName, commonSymptomNames } from "@/data/symptoms";
 import { toDisplayName } from "@/i18n/symptomLang";
 
+const EN_DIGITS = "0123456789";
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+const toBnDigits = (s: string) => s.replace(/[0-9]/g, (d) => BN_DIGITS[+d]);
+const toEnDigits = (s: string) => s.replace(/[০-৯]/g, (d) => EN_DIGITS[BN_DIGITS.indexOf(d)]);
+
 const SymptomCheck = () => {
-  const [searchParams] = useSearchParams();
-  const preselectedSymptom = searchParams.get("symptom");
+  const location = useLocation();
+  const preselectedSymptom = (location.state as { symptom?: string } | null)?.symptom || null;
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isBn = i18n.language === "bn";
 
   const hasPreselected = !!preselectedSymptom;
   const TOTAL_STEPS = hasPreselected ? 3 : 4;
@@ -42,7 +48,11 @@ const SymptomCheck = () => {
         s.toLowerCase().includes(symptomSearch.toLowerCase()) ||
         toDisplayName(s).toLowerCase().includes(symptomSearch.toLowerCase())
       )
-    : allSymptoms;
+    : [...allSymptoms].sort((a, b) => {
+        const aCommon = commonSymptomNames.has(a) ? 0 : 1;
+        const bCommon = commonSymptomNames.has(b) ? 0 : 1;
+        return aCommon - bCommon;
+      });
 
   const toggleSymptom = (id: string) => {
     setSelectedSymptoms((prev) =>
@@ -62,6 +72,7 @@ const SymptomCheck = () => {
     if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
+      sessionStorage.removeItem("cachedPrediction");
       const symptoms = selectedSymptoms.length > 0 ? selectedSymptoms.join(",") : "headache";
       navigate("/chat", { state: { symptom: symptoms, sex, age, duration } });
     }
@@ -93,7 +104,7 @@ const SymptomCheck = () => {
             <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
           <span className="text-sm font-medium text-muted-foreground">
-            {t("step_of", { step, total: TOTAL_STEPS })}
+            {t("step_of", { step: isBn ? toBnDigits(String(step)) : step, total: isBn ? toBnDigits(String(TOTAL_STEPS)) : TOTAL_STEPS })}
           </span>
           <button
             onClick={() => navigate("/")}
@@ -153,12 +164,14 @@ const SymptomCheck = () => {
                   {t("age_note")}
                 </p>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder={t("enter_age")}
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  min={1}
-                  max={120}
+                  value={isBn ? toBnDigits(age) : age}
+                  onChange={(e) => {
+                    const raw = toEnDigits(e.target.value).replace(/[^0-9]/g, "");
+                    if (raw === "" || (Number(raw) >= 0 && Number(raw) <= 120)) setAge(raw);
+                  }}
                   className="rounded-xl text-center text-lg"
                 />
               </div>
@@ -243,11 +256,14 @@ const SymptomCheck = () => {
                   {t("duration_note")}
                 </p>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder={t("number_of_days")}
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  min={1}
+                  value={isBn ? toBnDigits(duration) : duration}
+                  onChange={(e) => {
+                    const raw = toEnDigits(e.target.value).replace(/[^0-9]/g, "");
+                    setDuration(raw);
+                  }}
                   className="rounded-xl text-center text-lg"
                 />
               </div>

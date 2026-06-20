@@ -40,6 +40,20 @@ export const quickSymptomNames: string[] = [
   "Chest pain", "Back pain", "Rash", "Nausea", "Dizziness", "Anxiety",
 ];
 
+// ── Common symptoms shown at the top of the symptom picker ──
+const _commonSet = new Set([
+  "Headache", "Cough", "Fever", "Diarrhea", "Fatigue", "Sore throat",
+  "Chest pain", "Back pain", "Rash", "Nausea", "Dizziness", "Anxiety",
+  "Vomiting", "Abdominal pain", "Shortness of breath", "Runny nose",
+  "Sneezing", "Body ache", "Joint pain", "Muscle pain",
+  "Loss of appetite", "Constipation", "Bloating", "Heartburn",
+  "Insomnia", "Weight loss", "Weight gain", "Sweating",
+  "Chills", "Itching", "Swelling", "Numbness",
+  "Frequent urination", "Blurred vision", "Ear pain", "Toothache",
+  "Neck pain", "Knee pain", "Stomach pain", "Eye pain",
+]);
+export const commonSymptomNames = _commonSet;
+
 // ── Chat flow types ──
 
 export interface ChatMessage {
