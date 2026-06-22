@@ -17,16 +17,8 @@ const Index = () => {
   };
 
   return (
-    <div
-      className="min-h-screen bg-lavender"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('/home.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
+    <div className="min-h-screen bg-medical">
+
       <LanguageToggle />
       {/* Hero Section */}
       <div className="relative overflow-hidden">

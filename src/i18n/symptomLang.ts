@@ -31,3 +31,18 @@ export function getDisplaySymptomList(englishList: string[]): string[] {
 export function getCurrentLanguage(): string {
   return i18n.language;
 }
+
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+
+export function toBnDigits(s: string): string {
+  return s.replace(/[0-9]/g, (d) => BN_DIGITS[+d]);
+}
+
+export function toEnDigits(s: string): string {
+  return s.replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)));
+}
+
+export function localizeDigits(n: number | string): string {
+  const s = String(n);
+  return i18n.language === "bn" ? toBnDigits(s) : s;
+}

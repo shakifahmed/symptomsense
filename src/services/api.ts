@@ -64,6 +64,13 @@ export interface TriageInput {
   language?: string;
 }
 
+export interface PossibleCondition {
+  name: string;
+  display_name: string;
+  match_percent: number;
+  matched_symptoms: string[];
+}
+
 export interface TriageOutput {
   prediction_id: number;
   recommendation: "Doctor Consultation" | "Drug";
@@ -73,6 +80,7 @@ export interface TriageOutput {
   llm_used: boolean;
   llm_overrode: boolean;
   user_explanation: string;
+  possible_conditions: PossibleCondition[];
 }
 
 export interface FeedbackInput {

@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { type ChatMessage } from "@/data/symptoms";
-import { getCurrentLanguage } from "@/i18n/symptomLang";
+import { getCurrentLanguage, toDisplayName } from "@/i18n/symptomLang";
 import { api, type TriageOutput } from "@/services/api";
 import { motion } from "framer-motion";
-import { AlertCircle, CheckCircle, AlertTriangle, RotateCcw, Stethoscope, Loader2, MessageSquare, Star, Send, ExternalLink } from "lucide-react";
+import { AlertCircle, CheckCircle, AlertTriangle, RotateCcw, Stethoscope, Loader2, MessageSquare, Star, Send, ExternalLink, Activity, ChevronDown } from "lucide-react";
 
 interface LocationState {
   symptoms: string;
@@ -20,6 +20,54 @@ interface LocationState {
   chatParams?: { symptom: string; sex: string; age: string; duration: string };
   cachedPrediction?: TriageOutput;
   cachedFeedbackSent?: boolean;
+}
+
+function ConditionCard({ condition, index }: { condition: { name: string; display_name: string; match_percent: number; matched_symptoms: string[] }; index: number }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const barColor = condition.match_percent >= 50 ? "bg-severity-serious" : condition.match_percent >= 25 ? "bg-amber-400" : "bg-primary";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.05 * index }}
+      className="rounded-xl border border-border p-3"
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-3"
+      >
+        <div className="min-w-0 flex-1 text-left">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground truncate">{condition.display_name}</span>
+            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {Math.round(condition.match_percent)}% {t("match")}
+            </span>
+          </div>
+          {condition.display_name !== condition.name && (
+            <p className="mt-0.5 text-xs text-muted-foreground truncate">{condition.name}</p>
+          )}
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${condition.match_percent}%` }} />
+          </div>
+        </div>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-2 border-t border-border pt-2">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("matched_symptoms_label")}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {condition.matched_symptoms.map((s) => (
+              <span key={s} className="rounded-full bg-chip px-2 py-0.5 text-xs text-chip-foreground">
+                {toDisplayName(s)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
 }
 
 const Results = () => {
@@ -124,16 +172,8 @@ const Results = () => {
   };
 
   return (
-    <div
-      className="min-h-screen bg-lavender"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('/results.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
+    <div className="min-h-screen bg-medical">
+
       <div className="mx-auto max-w-2xl px-4 py-6">
         {/* Header */}
         <motion.div
@@ -213,6 +253,28 @@ const Results = () => {
               })()}
             </motion.div>
           </div>
+        )}
+
+        {/* Possible Conditions */}
+        {prediction && !loading && prediction.possible_conditions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-4 rounded-2xl bg-card p-6 shadow-sm"
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold text-foreground">{t("possible_conditions")}</h3>
+              <span className="shrink-0 rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">Beta</span>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">{t("possible_conditions_note")}</p>
+            <div className="space-y-3">
+              {prediction.possible_conditions.map((condition, idx) => (
+                <ConditionCard key={condition.name} condition={condition} index={idx} />
+              ))}
+            </div>
+          </motion.div>
         )}
 
         {/* Feedback */}

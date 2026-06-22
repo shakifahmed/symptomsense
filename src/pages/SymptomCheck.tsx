@@ -8,13 +8,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, X, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadSymptoms, nameToId, idToName, commonSymptomNames } from "@/data/symptoms";
-import { toDisplayName } from "@/i18n/symptomLang";
-
-const EN_DIGITS = "0123456789";
-const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
-const toBnDigits = (s: string) => s.replace(/[0-9]/g, (d) => BN_DIGITS[+d]);
-const toEnDigits = (s: string) => s.replace(/[০-৯]/g, (d) => EN_DIGITS[BN_DIGITS.indexOf(d)]);
+import { loadSymptoms, nameToId, idToName, chiefComplaintNames, chiefComplaintCategories } from "@/data/symptoms";
+import { toDisplayName, toBnDigits, toEnDigits } from "@/i18n/symptomLang";
+import { CategoryDropdown } from "@/components/CategoryDropdown";
 
 const SymptomCheck = () => {
   const location = useLocation();
@@ -43,16 +39,15 @@ const SymptomCheck = () => {
   const isSymptomStep = !hasPreselected && step === 3;
   const isDurationStep = hasPreselected ? step === 3 : step === 4;
 
-  const filteredSymptoms = symptomSearch.trim()
-    ? allSymptoms.filter((s) =>
+  const chiefComplaints = allSymptoms.filter((s) => chiefComplaintNames.has(s));
+  const isSearching = symptomSearch.trim().length > 0;
+
+  const searchResults = isSearching
+    ? chiefComplaints.filter((s) =>
         s.toLowerCase().includes(symptomSearch.toLowerCase()) ||
         toDisplayName(s).toLowerCase().includes(symptomSearch.toLowerCase())
       )
-    : [...allSymptoms].sort((a, b) => {
-        const aCommon = commonSymptomNames.has(a) ? 0 : 1;
-        const bCommon = commonSymptomNames.has(b) ? 0 : 1;
-        return aCommon - bCommon;
-      });
+    : [];
 
   const toggleSymptom = (id: string) => {
     setSelectedSymptoms((prev) =>
@@ -84,16 +79,8 @@ const SymptomCheck = () => {
   };
 
   return (
-    <div
-      className="min-h-screen bg-lavender"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('/check.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
+    <div className="min-h-screen bg-medical">
+
       <div className="mx-auto max-w-lg px-4 py-6">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -125,6 +112,10 @@ const SymptomCheck = () => {
             transition={{ duration: 0.25 }}
             className="rounded-2xl bg-card p-6 shadow-sm"
           >
+            <form
+              onSubmit={(e) => { e.preventDefault(); if (canProceed()) handleNext(); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && canProceed()) { e.preventDefault(); handleNext(); } }}
+            >
             {step === 1 && (
               <div>
                 <h2 className="mb-2 text-xl font-bold text-foreground">
@@ -196,6 +187,7 @@ const SymptomCheck = () => {
                           {toDisplayName(idToName(id, allSymptoms))}
                         </span>
                         <button
+                          type="button"
                           onClick={() => toggleSymptom(id)}
                           className="text-muted-foreground hover:text-foreground"
                         >
@@ -215,34 +207,46 @@ const SymptomCheck = () => {
                   />
                 </div>
                 <div className="max-h-56 overflow-y-auto rounded-xl border border-border p-2">
-                  <div className="flex flex-wrap gap-2">
-                    {filteredSymptoms.slice(0, 100).map((name) => {
-                      const id = nameToId(name);
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => toggleSymptom(id)}
-                          className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                            selectedSymptoms.includes(id)
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-chip text-chip-foreground hover:bg-primary/15"
-                          }`}
-                        >
-                          {toDisplayName(name)}
-                        </button>
-                      );
-                    })}
-                    {filteredSymptoms.length > 100 && (
-                      <p className="w-full text-center text-xs text-muted-foreground py-1">
-                        {t("type_to_search", { count: filteredSymptoms.length - 100 })}
-                      </p>
-                    )}
-                    {filteredSymptoms.length === 0 && (
-                      <p className="w-full text-center text-xs text-muted-foreground py-2">
-                        {t("no_symptoms_found")}
-                      </p>
-                    )}
-                  </div>
+                  {isSearching ? (
+                    <div className="flex flex-wrap gap-2">
+                      {searchResults.map((name) => {
+                        const id = nameToId(name);
+                        return (
+                          <button
+                            type="button"
+                            key={id}
+                            onClick={() => toggleSymptom(id)}
+                            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                              selectedSymptoms.includes(id)
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-chip text-chip-foreground hover:bg-primary/15"
+                            }`}
+                          >
+                            {toDisplayName(name)}
+                          </button>
+                        );
+                      })}
+                      {searchResults.length === 0 && (
+                        <p className="w-full text-center text-xs text-muted-foreground py-2">
+                          {t("no_symptoms_found")}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {chiefComplaintCategories.map((cat) => (
+                        <CategoryDropdown
+                          key={cat.key}
+                          categoryKey={cat.key}
+                          symptoms={cat.symptoms}
+                          allSymptoms={allSymptoms}
+                          selectedSymptoms={selectedSymptoms}
+                          onToggle={toggleSymptom}
+                          compact
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -270,12 +274,13 @@ const SymptomCheck = () => {
             )}
 
             <Button
-              onClick={handleNext}
+              type="submit"
               disabled={!canProceed()}
               className="mt-6 w-full rounded-full py-6 text-base font-semibold"
             >
               {step === TOTAL_STEPS ? t("start_chat") : t("next")}
             </Button>
+            </form>
           </motion.div>
         </AnimatePresence>
       </div>

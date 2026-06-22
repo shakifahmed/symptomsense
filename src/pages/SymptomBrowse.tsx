@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { loadSymptoms, nameToId, idToName } from "@/data/symptoms";
-import { toDisplayName } from "@/i18n/symptomLang";
+import { loadSymptoms, nameToId, idToName, chiefComplaintNames, chiefComplaintCategories } from "@/data/symptoms";
+import { toDisplayName, localizeDigits } from "@/i18n/symptomLang";
+import { CategoryDropdown } from "@/components/CategoryDropdown";
 import { ArrowLeft, Search, X } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -19,12 +20,16 @@ const SymptomBrowse = () => {
     loadSymptoms().then(setAllSymptoms);
   }, []);
 
-  const filtered = search.trim()
-    ? allSymptoms.filter((s) =>
+  const chiefComplaints = allSymptoms.filter((s) => chiefComplaintNames.has(s));
+
+  const isSearching = search.trim().length > 0;
+
+  const searchResults = isSearching
+    ? chiefComplaints.filter((s) =>
         s.toLowerCase().includes(search.toLowerCase()) ||
         toDisplayName(s).toLowerCase().includes(search.toLowerCase())
       )
-    : allSymptoms;
+    : [];
 
   const toggleSymptom = (id: string) => {
     setSelectedSymptoms((prev) =>
@@ -33,21 +38,13 @@ const SymptomBrowse = () => {
   };
 
   const handleContinue = () => {
-    navigate(`/check?symptom=${selectedSymptoms.join(",")}`);
+    sessionStorage.removeItem("cachedPrediction");
+    navigate("/check", { state: { symptom: selectedSymptoms.join(",") } });
   };
 
   return (
-    <div
-      className="min-h-screen bg-lavender"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('/browse.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }}
-    >
+    <div className="min-h-screen bg-medical">
+
       <div className="mx-auto max-w-2xl px-4 py-6">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
@@ -98,8 +95,8 @@ const SymptomBrowse = () => {
               className="w-full rounded-full py-6 text-base font-semibold"
             >
               {selectedSymptoms.length > 1
-                ? t("continue_with_plural", { count: selectedSymptoms.length })
-                : t("continue_with", { count: selectedSymptoms.length })}
+                ? t("continue_with_plural", { count: localizeDigits(selectedSymptoms.length) })
+                : t("continue_with", { count: localizeDigits(selectedSymptoms.length) })}
             </Button>
           </motion.div>
         )}
@@ -121,44 +118,56 @@ const SymptomBrowse = () => {
           </div>
         </motion.div>
 
-        {/* Symptom list */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="rounded-2xl bg-card p-4 shadow-sm"
-        >
-          <div className="max-h-[60vh] overflow-y-auto">
-            <div className="flex flex-wrap gap-2">
-              {filtered.slice(0, 200).map((name) => {
-                const id = nameToId(name);
-                return (
-                  <button
-                    key={id}
-                    onClick={() => toggleSymptom(id)}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-                      selectedSymptoms.includes(id)
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-chip text-chip-foreground hover:bg-primary/15"
-                    }`}
-                  >
-                    {toDisplayName(name)}
-                  </button>
-                );
-              })}
-              {filtered.length > 200 && (
-                <p className="w-full text-center text-xs text-muted-foreground py-2">
-                  {t("type_to_search", { count: filtered.length - 200 })}
-                </p>
-              )}
-              {filtered.length === 0 && (
-                <p className="w-full text-center text-sm text-muted-foreground py-4">
-                  {t("no_symptoms_found")}
-                </p>
-              )}
+        {/* Search results (flat) */}
+        {isSearching && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl bg-card p-4 shadow-sm"
+          >
+            <div className="max-h-[60vh] overflow-y-auto">
+              <div className="flex flex-wrap gap-2">
+                {searchResults.map((name) => {
+                  const id = nameToId(name);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => toggleSymptom(id)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                        selectedSymptoms.includes(id)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-chip text-chip-foreground hover:bg-primary/15"
+                      }`}
+                    >
+                      {toDisplayName(name)}
+                    </button>
+                  );
+                })}
+                {searchResults.length === 0 && (
+                  <p className="w-full text-center text-sm text-muted-foreground py-4">
+                    {t("no_symptoms_found")}
+                  </p>
+                )}
+              </div>
             </div>
+          </motion.div>
+        )}
+
+        {/* Categorized dropdown view (default) */}
+        {!isSearching && (
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {chiefComplaintCategories.map((cat) => (
+              <CategoryDropdown
+                key={cat.key}
+                categoryKey={cat.key}
+                symptoms={cat.symptoms}
+                allSymptoms={allSymptoms}
+                selectedSymptoms={selectedSymptoms}
+                onToggle={toggleSymptom}
+              />
+            ))}
           </div>
-        </motion.div>
+        )}
       </div>
     </div>
   );

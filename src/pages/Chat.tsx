@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { loadSymptoms, idToName, type ChatMessage } from "@/data/symptoms";
+import { loadSymptoms, idToName, chiefComplaintNames, type ChatMessage } from "@/data/symptoms";
 import { api, type BatchQuestion } from "@/services/api";
 import { LikertBatchForm } from "@/components/LikertBatchForm";
 import { VariantSelectForm } from "@/components/VariantSelectForm";
@@ -513,17 +513,8 @@ const Chat = () => {
   const inputDisabled = isTyping || conversationDone || batchLoading || pendingBatch !== null || activeVariantMsgId !== null;
 
   return (
-    <div
-      className="flex flex-col bg-lavender"
-      style={{
-        height: "100dvh",
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('/chat.png')",
-        backgroundSize:     "cover",
-        backgroundPosition: "center",
-        backgroundRepeat:   "no-repeat",
-      }}
-    >
+    <div className="flex flex-col bg-medical" style={{ height: "100dvh" }}>
+
       {/* Header */}
       <div className="border-b border-border bg-card/70 px-4 py-3">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
@@ -676,7 +667,7 @@ const Chat = () => {
         <div className="mx-auto max-w-2xl">
           {awaitingAdditionalSymptoms ? (
             <SymptomAutocomplete
-              symptoms={symptomList}
+              symptoms={symptomList.filter((s) => chiefComplaintNames.has(s))}
               excluded={[...confirmed, ...rejected, ...unsure, ...symptomIds.map((id) => idToName(id, symptomList).toLowerCase())]}
               onSubmit={(selected) => {
                 const label = selected.map((s) => s.replace(/\b\w/g, (c) => c.toUpperCase())).join(", ");
