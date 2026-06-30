@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  html[lang="bn"], html[lang="bn"] * {
+    font-family: "Noto Sans Bengali", system-ui, sans-serif;
+  }
+
   :root {
     --background: 250 30% 98%;
     --foreground: 240 20% 16%;

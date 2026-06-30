@@ -10,6 +10,15 @@
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "/api");
 
+export function getUserUUID(): string {
+  let uuid = localStorage.getItem("user_uuid");
+  if (!uuid) {
+    uuid = crypto.randomUUID();
+    localStorage.setItem("user_uuid", uuid);
+  }
+  return uuid;
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface SuggestInput {
@@ -32,6 +41,8 @@ export interface SuggestInput {
   questions_asked?: number;
   /** UI language code (en or bn) — passed to LLM_QA for question generation */
   language?: string;
+  /** Who the check is for — adapts question phrasing */
+  check_for?: string;
 }
 
 export interface BatchQuestion {
@@ -62,6 +73,8 @@ export interface TriageInput {
   severity: "Mild" | "Moderate" | "Severe";
   duration: number;
   language?: string;
+  user_uuid?: string;
+  check_for?: string;
 }
 
 export interface PossibleCondition {

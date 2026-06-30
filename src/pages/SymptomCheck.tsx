@@ -20,9 +20,9 @@ const SymptomCheck = () => {
   const isBn = i18n.language === "bn";
 
   const hasPreselected = !!preselectedSymptom;
-  const TOTAL_STEPS = hasPreselected ? 3 : 4;
 
   const [step, setStep] = useState(1);
+  const [checkFor, setCheckFor] = useState("");
   const [sex, setSex] = useState("");
   const [age, setAge] = useState("");
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>(preselectedSymptom ? preselectedSymptom.split(",") : []);
@@ -34,10 +34,16 @@ const SymptomCheck = () => {
     loadSymptoms().then(setAllSymptoms);
   }, []);
 
+  const TOTAL_STEPS = hasPreselected ? 4 : 5;
+
   const progress = (step / TOTAL_STEPS) * 100;
 
-  const isSymptomStep = !hasPreselected && step === 3;
-  const isDurationStep = hasPreselected ? step === 3 : step === 4;
+  const isSexStep = step === 2;
+  const isAgeStep = step === 3;
+  const isSymptomStep = !hasPreselected && step === 4;
+  const isDurationStep = hasPreselected ? step === 4 : step === 5;
+
+  const ctxSuffix = checkFor === "child" ? "_child" : checkFor === "self" ? "_self" : "_patient";
 
   const chiefComplaints = allSymptoms.filter((s) => chiefComplaintNames.has(s));
   const isSearching = symptomSearch.trim().length > 0;
@@ -56,8 +62,9 @@ const SymptomCheck = () => {
   };
 
   const canProceed = () => {
-    if (step === 1) return sex !== "";
-    if (step === 2) return age !== "" && Number(age) > 0;
+    if (step === 1) return checkFor !== "";
+    if (isSexStep) return sex !== "";
+    if (isAgeStep) return age !== "" && Number(age) > 0;
     if (isSymptomStep) return selectedSymptoms.length > 0;
     if (isDurationStep) return duration !== "" && Number(duration) > 0;
     return false;
@@ -69,7 +76,7 @@ const SymptomCheck = () => {
     } else {
       sessionStorage.removeItem("cachedPrediction");
       const symptoms = selectedSymptoms.length > 0 ? selectedSymptoms.join(",") : "headache";
-      navigate("/chat", { state: { symptom: symptoms, sex, age, duration } });
+      navigate("/chat", { state: { symptom: symptoms, sex, age, duration, checkFor } });
     }
   };
 
@@ -79,9 +86,9 @@ const SymptomCheck = () => {
   };
 
   return (
-    <div className="min-h-screen bg-medical">
+    <div className="flex h-dvh flex-col bg-medical">
 
-      <div className="mx-auto max-w-lg px-4 py-6">
+      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col overflow-hidden px-4 py-6">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <button
@@ -110,19 +117,53 @@ const SymptomCheck = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.25 }}
-            className="rounded-2xl bg-card p-6 shadow-sm"
+            className="flex min-h-0 flex-1 flex-col rounded-2xl bg-card p-6 shadow-sm"
           >
             <form
               onSubmit={(e) => { e.preventDefault(); if (canProceed()) handleNext(); }}
               onKeyDown={(e) => { if (e.key === "Enter" && canProceed()) { e.preventDefault(); handleNext(); } }}
+              className="flex min-h-0 flex-1 flex-col"
             >
             {step === 1 && (
               <div>
                 <h2 className="mb-2 text-xl font-bold text-foreground">
-                  {t("sex_question")}
+                  {t("check_for_question")}
                 </h2>
                 <p className="mb-6 text-xs text-muted-foreground">
-                  {t("sex_note")}
+                  {t("check_for_note")}
+                </p>
+                <RadioGroup value={checkFor} onValueChange={setCheckFor} className="space-y-2">
+                  {[
+                    { value: "self", label: t("check_for_self") },
+                    { value: "spouse", label: t("check_for_spouse") },
+                    { value: "child", label: t("check_for_child") },
+                    { value: "parent", label: t("check_for_parent") },
+                    { value: "other", label: t("check_for_other") },
+                  ].map((option) => (
+                    <Label
+                      key={option.value}
+                      htmlFor={`check-${option.value}`}
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 transition-all ${
+                        checkFor === option.value
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <RadioGroupItem value={option.value} id={`check-${option.value}`} />
+                      <span className="text-sm font-medium">{option.label}</span>
+                    </Label>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
+
+            {isSexStep && (
+              <div>
+                <h2 className="mb-2 text-xl font-bold text-foreground">
+                  {t(`sex_question${ctxSuffix}`)}
+                </h2>
+                <p className="mb-6 text-xs text-muted-foreground">
+                  {t(`sex_note${ctxSuffix}`)}
                 </p>
                 <RadioGroup value={sex} onValueChange={setSex} className="space-y-3">
                   {[
@@ -146,18 +187,18 @@ const SymptomCheck = () => {
               </div>
             )}
 
-            {step === 2 && (
+            {isAgeStep && (
               <div>
                 <h2 className="mb-2 text-xl font-bold text-foreground">
-                  {t("age_question")}
+                  {t(`age_question${ctxSuffix}`)}
                 </h2>
                 <p className="mb-6 text-sm text-muted-foreground">
-                  {t("age_note")}
+                  {t(`age_note${ctxSuffix}`)}
                 </p>
                 <Input
                   type="text"
                   inputMode="numeric"
-                  placeholder={t("enter_age")}
+                  placeholder={t(`enter_age_placeholder${ctxSuffix}`)}
                   value={isBn ? toBnDigits(age) : age}
                   onChange={(e) => {
                     const raw = toEnDigits(e.target.value).replace(/[^0-9]/g, "");
@@ -169,12 +210,12 @@ const SymptomCheck = () => {
             )}
 
             {isSymptomStep && (
-              <div>
+              <div className="flex min-h-0 flex-1 flex-col">
                 <h2 className="mb-2 text-xl font-bold text-foreground">
-                  {t("symptom_question")}
+                  {t(`symptom_question${ctxSuffix}`)}
                 </h2>
                 <p className="mb-4 text-sm text-muted-foreground">
-                  {t("symptom_note")}
+                  {t(`symptom_note${ctxSuffix}`)}
                 </p>
                 {selectedSymptoms.length > 0 && (
                   <div className="mb-4 flex flex-wrap gap-2">
@@ -206,7 +247,7 @@ const SymptomCheck = () => {
                     className="rounded-full pl-10"
                   />
                 </div>
-                <div className="max-h-56 overflow-y-auto rounded-xl border border-border p-2">
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border p-2">
                   {isSearching ? (
                     <div className="flex flex-wrap gap-2">
                       {searchResults.map((name) => {
@@ -254,19 +295,19 @@ const SymptomCheck = () => {
             {isDurationStep && (
               <div>
                 <h2 className="mb-2 text-xl font-bold text-foreground">
-                  {t("duration_question")}
+                  {t(`duration_question${ctxSuffix}`)}
                 </h2>
                 <p className="mb-6 text-sm text-muted-foreground">
-                  {t("duration_note")}
+                  {t(`duration_note${ctxSuffix}`)}
                 </p>
                 <Input
                   type="text"
                   inputMode="numeric"
-                  placeholder={t("number_of_days")}
+                  placeholder={t("number_of_days_placeholder")}
                   value={isBn ? toBnDigits(duration) : duration}
                   onChange={(e) => {
                     const raw = toEnDigits(e.target.value).replace(/[^0-9]/g, "");
-                    setDuration(raw);
+                    if (raw === "" || (Number(raw) >= 0 && Number(raw) <= 365)) setDuration(raw);
                   }}
                   className="rounded-xl text-center text-lg"
                 />
@@ -276,7 +317,7 @@ const SymptomCheck = () => {
             <Button
               type="submit"
               disabled={!canProceed()}
-              className="mt-6 w-full rounded-full py-6 text-base font-semibold"
+              className="mt-auto w-full shrink-0 rounded-full py-6 text-base font-semibold"
             >
               {step === TOTAL_STEPS ? t("start_chat") : t("next")}
             </Button>

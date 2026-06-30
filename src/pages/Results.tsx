@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { type ChatMessage } from "@/data/symptoms";
 import { getCurrentLanguage, toDisplayName } from "@/i18n/symptomLang";
-import { api, type TriageOutput } from "@/services/api";
+import { api, getUserUUID, type TriageOutput } from "@/services/api";
 import { motion } from "framer-motion";
 import { AlertCircle, CheckCircle, AlertTriangle, RotateCcw, Stethoscope, Loader2, MessageSquare, Star, Send, ExternalLink, Activity, ChevronDown } from "lucide-react";
+import { adaptTextForCheckFor } from "@/lib/utils";
 
 interface LocationState {
   symptoms: string;
@@ -14,10 +15,11 @@ interface LocationState {
   gender: "Male" | "Female";
   severity: string;
   duration: number;
+  checkFor?: string;
   symptomLabel: string;
   confirmedSymptoms: string[];
   chatMessages?: ChatMessage[];
-  chatParams?: { symptom: string; sex: string; age: string; duration: string };
+  chatParams?: { symptom: string; sex: string; age: string; duration: string; checkFor?: string };
   cachedPrediction?: TriageOutput;
   cachedFeedbackSent?: boolean;
 }
@@ -76,6 +78,8 @@ const Results = () => {
   const navigate = useNavigate();
 
   const state = location.state as LocationState | null;
+  const checkFor = state?.checkFor || "self";
+  const ctxSuffix = checkFor === "child" ? "_child" : checkFor === "self" ? "_self" : "_patient";
 
   const [prediction, setPrediction] = useState<TriageOutput | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,6 +146,8 @@ const Results = () => {
           severity: severityMap[state.severity] || "Mild",
           duration: state.duration,
           language: getCurrentLanguage(),
+          user_uuid: getUserUUID(),
+          check_for: state.checkFor || "self",
         });
         setPrediction(result);
         sessionStorage.setItem("cachedPrediction", JSON.stringify(result));
@@ -184,8 +190,8 @@ const Results = () => {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
             <Stethoscope className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="mb-1 text-2xl font-bold text-foreground">{t("your_results")}</h1>
-          <p className="text-sm text-muted-foreground">{t("based_on_symptoms")}</p>
+          <h1 className="mb-1 text-2xl font-bold text-foreground">{t(`your_results${ctxSuffix}`)}</h1>
+          <p className="text-sm text-muted-foreground">{t(`based_on_symptoms${ctxSuffix}`)}</p>
         </motion.div>
 
         {/* Disclaimer */}
@@ -206,7 +212,7 @@ const Results = () => {
             className="flex flex-col items-center gap-3 py-12"
           >
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">{t("analyzing_symptoms")}</p>
+            <p className="text-sm text-muted-foreground">{t(`analyzing_symptoms${ctxSuffix}`)}</p>
           </motion.div>
         )}
 
@@ -246,7 +252,7 @@ const Results = () => {
                       </span>
                     </div>
                     <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-                      {prediction.user_explanation}
+                      {adaptTextForCheckFor(prediction.user_explanation, getCurrentLanguage(), checkFor)}
                     </p>
                   </>
                 );
@@ -255,7 +261,7 @@ const Results = () => {
           </div>
         )}
 
-        {/* Possible Conditions */}
+        {/* Possible Conditions — hidden from UI, backend still computes and stores them
         {prediction && !loading && prediction.possible_conditions.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -268,7 +274,7 @@ const Results = () => {
               <h3 className="text-lg font-semibold text-foreground">{t("possible_conditions")}</h3>
               <span className="shrink-0 rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">Beta</span>
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">{t("possible_conditions_note")}</p>
+            <p className="mb-4 text-xs text-muted-foreground">{adaptTextForCheckFor(t("possible_conditions_note"), getCurrentLanguage(), checkFor)}</p>
             <div className="space-y-3">
               {prediction.possible_conditions.map((condition, idx) => (
                 <ConditionCard key={condition.name} condition={condition} index={idx} />
@@ -276,8 +282,9 @@ const Results = () => {
             </div>
           </motion.div>
         )}
+        */}
 
-        {/* Feedback */}
+        {/* Feedback — hidden, using Google Form instead
         {prediction && !loading && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -346,6 +353,7 @@ const Results = () => {
             )}
           </motion.div>
         )}
+        */}
 
         {/* Google Form Feedback */}
         {prediction && !loading && (
@@ -356,7 +364,7 @@ const Results = () => {
             className="mt-4 text-center"
           >
             <a
-              href="https://forms.gle/ySHacu3uiDkvFCm2A"
+              href={`https://docs.google.com/forms/d/e/1FAIpQLSfoTDoot2oNDDRWSYaLsKDMDEQW8dejBVLxMkbCsXFhJnHSIw/viewform?usp=pp_url&entry.295129101=${getUserUUID()}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"

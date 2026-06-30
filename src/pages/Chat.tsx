@@ -13,6 +13,7 @@ import { SymptomAutocomplete } from "@/components/SymptomAutocomplete";
 import { toDisplayName, getCurrentLanguage } from "@/i18n/symptomLang";
 import { X, Send, Stethoscope } from "lucide-react";
 import { motion } from "framer-motion";
+import { adaptTextForCheckFor } from "@/lib/utils";
 
 /** Convert symptom IDs to comma-separated lowercase names for the API */
 const idsToApiString = (ids: string[], symptomList: string[]): string =>
@@ -21,11 +22,13 @@ const idsToApiString = (ids: string[], symptomList: string[]): string =>
 const Chat = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const navState = location.state as { symptom?: string; sex?: string; age?: string; duration?: string; chatMessages?: ChatMessage[]; cachedPrediction?: unknown; confirmedSymptoms?: string[]; symptoms?: string; severity?: string; symptomLabel?: string } | null;
+  const navState = location.state as { symptom?: string; sex?: string; age?: string; duration?: string; checkFor?: string; chatMessages?: ChatMessage[]; cachedPrediction?: unknown; confirmedSymptoms?: string[]; symptoms?: string; severity?: string; symptomLabel?: string } | null;
   const symptomParam  = navState?.symptom   || "headache";
   const sexParam      = navState?.sex       || "";
   const ageParam      = navState?.age       || "25";
   const durationParam = navState?.duration  || "1";
+  const checkForParam = navState?.checkFor  || "self";
+  const ctxSuffix = checkForParam === "child" ? "_child" : checkForParam === "self" ? "_self" : "_patient";
 
   const [symptomList, setSymptomList] = useState<string[]>([]);
 
@@ -116,6 +119,7 @@ const Chat = () => {
           gender:            sexParam === "male" ? "Male" : "Female",
           severity:          severity || "Mild",
           duration:          parseInt(durationParam),
+          checkFor:          checkForParam,
           symptomLabel,
           confirmedSymptoms: finalConfirmed,
           chatMessages:      messagesRef.current,
@@ -124,6 +128,7 @@ const Chat = () => {
             sex:      sexParam,
             age:      ageParam,
             duration: durationParam,
+            checkFor: checkForParam,
           },
         },
       });
@@ -141,12 +146,12 @@ const Chat = () => {
         {
           id:     "1",
           sender: "bot",
-          text:   t("greeting", { symptoms: symptomLabel }),
+          text:   t(`greeting${ctxSuffix}`, { symptoms: symptomLabel }),
         },
         {
           id:           "2",
           sender:       "bot",
-          text:         t("severity_question"),
+          text:         t(`severity_question${ctxSuffix}`),
           quickReplies: [t("severity_mild"), t("severity_moderate"), t("severity_severe")],
         },
       ]);
@@ -203,6 +208,7 @@ const Chat = () => {
           batch_size:          useBatch ? 5 : 1,
           questions_asked:     poolQuestionsAsked,
           language:            getCurrentLanguage(),
+          check_for:           checkForParam,
         });
 
         // ── Transitional message after batch submit (only when more questions follow) ──
@@ -217,14 +223,14 @@ const Chat = () => {
           addMessage({
             id: `batch-ack-${Date.now()}`,
             sender: "bot",
-            text: t(keys[Math.floor(Math.random() * keys.length)], { names }),
+            text: adaptTextForCheckFor(t(keys[Math.floor(Math.random() * keys.length)], { names }), getCurrentLanguage(), checkForParam),
           });
         } else if (batchConfirmedNames.length === 0 && hasMoreQuestions && useBatch) {
           const keys = ["batch_ack_none_1", "batch_ack_none_2", "batch_ack_none_3", "batch_ack_none_4", "batch_ack_none_5"];
           addMessage({
             id: `batch-ack-${Date.now()}`,
             sender: "bot",
-            text: t(keys[Math.floor(Math.random() * keys.length)]),
+            text: adaptTextForCheckFor(t(keys[Math.floor(Math.random() * keys.length)]), getCurrentLanguage(), checkForParam),
           });
         }
 
@@ -278,7 +284,7 @@ const Chat = () => {
             addMessage({
               id:     `severe-${Date.now()}`,
               sender: "bot",
-              text:   `⚠️ ${t("severe_warning", { symptoms: result.matched_severe_symptoms.map((s: string) => toDisplayName(s)).join(", ") })}`,
+              text:   `⚠️ ${adaptTextForCheckFor(t("severe_warning", { symptoms: result.matched_severe_symptoms.map((s: string) => toDisplayName(s)).join(", ") }), getCurrentLanguage(), checkForParam)}`,
             });
           }
 
@@ -287,14 +293,14 @@ const Chat = () => {
             addMessage({
               id:           `extra-prompt-${Date.now()}`,
               sender:       "bot",
-              text:         t("additional_symptoms_prompt"),
+              text:         t(`additional_symptoms_prompt${ctxSuffix}`),
             });
           } else {
             setConversationDone(true);
             addMessage({
               id:     "done",
               sender: "bot",
-              text:   t("done_message"),
+              text:   t(`done_message${ctxSuffix}`),
             });
             setTimeout(() => navigateToResults(newConfirmed), 2000);
           }
@@ -442,7 +448,7 @@ const Chat = () => {
         addMessage({
           id:     "done",
           sender: "bot",
-          text:   t("done_message"),
+          text:   t(`done_message${ctxSuffix}`),
         });
         setTimeout(() => navigateToResults(confirmed), 2000);
       } else {
@@ -687,7 +693,7 @@ const Chat = () => {
                 addMessage({
                   id: "done",
                   sender: "bot",
-                  text: t("done_message"),
+                  text: t(`done_message${ctxSuffix}`),
                 });
                 setTimeout(() => navigateToResults(confirmed), 2000);
               }}
